@@ -27,12 +27,22 @@ export function PdfPreview({
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
 
+  // Reset state when file changes to null
   useEffect(() => {
-    if (!file) {
+    if (file) return;
+    
+    // Cleanup when file is removed
+    return () => {
       setPages([]);
       setCurrentPage(0);
-      return;
-    }
+    };
+  }, [file]);
+
+  // Load PDF when file is provided
+  useEffect(() => {
+    if (!file) return;
+
+    let cancelled = false;
 
     const loadPdf = async () => {
       setLoading(true);
@@ -41,6 +51,8 @@ export function PdfPreview({
       try {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        if (cancelled) return;
 
         const loadedPages: ProcessedPage[] = [];
 
@@ -58,22 +70,30 @@ export function PdfPreview({
           loadedPages.push(processedPage);
         }
 
+        if (cancelled) return;
+
         setPages(loadedPages);
         setCurrentPage(0);
 
         if (onPagesLoaded) {
           onPagesLoaded(loadedPages);
         }
-
-        setLoading(false);
       } catch (err) {
+        if (cancelled) return;
         logError('Error loading PDF:', err);
         setError(err instanceof Error ? err.message : 'Error al cargar el PDF');
-        setLoading(false);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     loadPdf();
+
+    return () => {
+      cancelled = true;
+    };
   }, [file, onPagesLoaded, paperWidth, pdfProcessing]);
 
   if (!file) {
