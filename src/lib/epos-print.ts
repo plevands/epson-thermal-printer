@@ -490,7 +490,140 @@ export class EposPrintService {
   }
 
   /**
-   * Test printer connection
+   * Check printer connection without printing anything.
+   * Sends a status request to verify the printer is online and responding.
+   * 
+   * @returns Promise with connection result
+   * 
+   * @example
+   * ```typescript
+   * const service = new EposPrintService(config);
+   * const result = await service.checkConnection();
+   * 
+   * if (result.success) {
+   *   console.log('Printer is online!');
+   * } else {
+   *   console.log('Printer offline:', result.message);
+   * }
+   * ```
+   */
+  async checkConnection(): Promise<PrintResult> {
+    debug('checkConnection: starting...');
+    
+    // Ensure SDK is loaded first
+    const sdkLoaded = await this.ensureSDKLoaded();
+    if (!sdkLoaded) {
+      return {
+        success: false,
+        code: 'SDK_NOT_LOADED',
+        message: 'Failed to load Epson ePOS SDK',
+      };
+    }
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      
+      const doResolve = (result: PrintResult) => {
+        if (!resolved) {
+          resolved = true;
+          resolve(result);
+        }
+      };
+
+      // Shorter timeout for connection check
+      const connectionTimeout = Math.min(this.config.timeout, 10000);
+      
+      const timeoutId = setTimeout(() => {
+        error('checkConnection: timeout reached');
+        doResolve({
+          success: false,
+          code: 'TIMEOUT',
+          message: `La impresora no responde. Verifica la IP (${this.config.printerIP}) y que esté encendida.`,
+        });
+      }, connectionTimeout);
+
+      try {
+        const epson = getEpsonSDK();
+        const printerUrl = this.getPrinterUrl();
+        debug('checkConnection: Creating ePOSPrint with URL:', printerUrl);
+        
+        // Create an empty builder - just to get a valid XML request
+        const builder = new epson.ePOSBuilder();
+        // Don't add any print commands, just get the empty request
+        const xml = builder.toString();
+        
+        debug('checkConnection: Sending empty request to check status...');
+        
+        // Create printer for sending
+        const printer = new epson.ePOSPrint(printerUrl);
+        printer.timeout = connectionTimeout;
+
+        // Set callbacks BEFORE sending
+        printer.onreceive = (res) => {
+          debug('checkConnection onreceive:', res);
+          clearTimeout(timeoutId);
+          
+          // Even an empty request should get a response if printer is online
+          doResolve({
+            success: res.success,
+            code: res.code,
+            status: res.status,
+            message: res.success 
+              ? 'Impresora conectada y lista' 
+              : this.getStatusMessage(res.status),
+          });
+        };
+
+        printer.onerror = (err) => {
+          error('checkConnection onerror:', err);
+          clearTimeout(timeoutId);
+          doResolve({
+            success: false,
+            code: 'CONNECTION_ERROR',
+            status: err?.status,
+            message: `No se puede conectar a la impresora: ${err?.responseText || 'Sin respuesta'}`,
+          });
+        };
+
+        // Send empty request
+        printer.send(xml);
+      } catch (err) {
+        error('checkConnection error:', err);
+        clearTimeout(timeoutId);
+        doResolve({
+          success: false,
+          code: 'SDK_ERROR',
+          message: err instanceof Error ? err.message : 'Error desconocido',
+        });
+      }
+    });
+  }
+
+  /**
+   * Get human-readable message for printer status code
+   */
+  private getStatusMessage(status?: number): string {
+    if (!status) return 'Estado desconocido';
+    
+    const messages: string[] = [];
+    
+    // Check common status flags
+    if (status & 8) messages.push('Impresora offline');
+    if (status & 32) messages.push('Tapa abierta');
+    if (status & 524288) messages.push('Sin papel');
+    if (status & 131072) messages.push('Papel por acabarse');
+    if (status & 1024) messages.push('Error mecánico');
+    if (status & 2048) messages.push('Error en cuchilla');
+    if (status & 8192) messages.push('Error no recuperable');
+    
+    return messages.length > 0 
+      ? messages.join('. ') 
+      : 'Impresora lista';
+  }
+
+  /**
+   * Test printer connection by printing a small test receipt.
+   * Use `checkConnection()` if you want to test without printing.
    */
   testConnection(): Promise<PrintResult> {
     debug('testConnection: starting...');

@@ -118,6 +118,77 @@ const service = new EposPrintService({
 const result = await service.printCanvas(canvas);
 ```
 
+### Check Printer Connection
+
+You can verify if the printer is online before showing print options. This is useful to conditionally display UI elements or handle offline printers gracefully.
+
+**Using Hooks (React):**
+
+```typescript
+import { useEpsonPrinter, usePrinterConfig } from '@plevands/epson-thermal-printer';
+import { useEffect, useState } from 'react';
+
+function PrinterPanel() {
+  const { config } = usePrinterConfig();
+  const { checkConnection, print, isLoading, error } = useEpsonPrinter(config);
+  const [isOnline, setIsOnline] = useState<boolean | null>(null);
+
+  // Check connection when component mounts or config changes
+  useEffect(() => {
+    checkConnection().then(result => {
+      setIsOnline(result.success);
+    });
+  }, [checkConnection]);
+
+  if (isOnline === null) {
+    return <span>Checking printer connection...</span>;
+  }
+
+  if (!isOnline) {
+    return <span>⚠️ Printer offline: {error}</span>;
+  }
+
+  return (
+    <div>
+      <span>✅ Printer connected</span>
+      <button onClick={() => print(canvas)} disabled={isLoading}>
+        Print
+      </button>
+    </div>
+  );
+}
+```
+
+**Using Service API (No React):**
+
+```typescript
+import { EposPrintService } from '@plevands/epson-thermal-printer';
+
+const service = new EposPrintService({
+  printerIP: '192.168.1.100',
+  printerPort: 80,
+});
+
+// Check connection without printing anything
+const result = await service.checkConnection();
+
+if (result.success) {
+  console.log('Printer is online and ready!');
+} else {
+  console.log('Printer offline:', result.message);
+  // result.message includes helpful details like:
+  // - "Printer offline"
+  // - "Cover open"  
+  // - "Out of paper"
+  // - "Paper running low"
+}
+```
+
+| Method | Prints? | Use Case |
+|--------|---------|----------|
+| `checkConnection()` | ❌ No | Verify printer is online |
+| `testConnection()` | ✅ Yes | Print a small test receipt |
+
 ### With PDF Processing
 
 ```typescript

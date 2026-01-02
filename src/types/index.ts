@@ -71,6 +71,8 @@ export interface UseEpsonPrinterReturn {
       footerText?: string;
     }
   ) => Promise<PrintResult>;
+  /** Check printer connection without printing anything */
+  checkConnection: () => Promise<PrintResult>;
   /** Test printer connection by printing a small test receipt */
   testConnection: () => Promise<PrintResult>;
   /** Whether a print operation is in progress */

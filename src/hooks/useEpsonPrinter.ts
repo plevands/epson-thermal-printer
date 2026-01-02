@@ -161,9 +161,38 @@ export function useEpsonPrinter(
     }
   }, [config, options]);
 
+  const checkConnection = useCallback(async (): Promise<PrintResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const service = new EposPrintService(config, options);
+
+      // Use the service's checkConnection method (no printing)
+      const result = await service.checkConnection();
+
+      if (!result.success) {
+        setError(result.message || 'Connection check failed');
+      }
+
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+      return {
+        success: false,
+        code: 'ERROR',
+        message: errorMessage,
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [config, options]);
+
   return {
     print,
     printPages,
+    checkConnection,
     testConnection,
     isLoading,
     error,
