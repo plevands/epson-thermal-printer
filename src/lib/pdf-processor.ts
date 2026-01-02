@@ -1,14 +1,131 @@
 /**
  * PDF Processing utilities for Epson thermal printers
  * Handles margin trimming, scaling, and monochrome conversion
+ * 
+ * @remarks
+ * PDF processing requires the optional `pdfjs-dist` dependency.
+ * If you want to use PDF features, install it:
+ * 
+ * ```bash
+ * npm install pdfjs-dist
+ * ```
+ * 
+ * The library uses dynamic imports, so `pdfjs-dist` is only loaded
+ * when you call PDF processing functions. If you don't use PDF features,
+ * you don't need to install it.
  */
 
-import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFPageProxy } from 'pdfjs-dist';
 
-// Configure PDF.js worker from CDN to avoid bundling
-const PDFJS_VERSION = '4.10.38';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
+/** Cached pdfjs-dist module */
+let pdfjsLib: typeof import('pdfjs-dist') | null = null;
+
+/** Custom worker source (if configured before loading) */
+let customWorkerSrc: string | null = null;
+
+/** Default CDN URL for PDF.js worker (version appended after loading) */
+export const PDFJS_CDN_WORKER_BASE = 'https://unpkg.com/pdfjs-dist@';
+
+/** Full CDN URL (populated after loading pdfjs-dist) */
+export let PDFJS_CDN_WORKER_URL = '';
+
+/**
+ * Error thrown when pdfjs-dist is not installed
+ */
+export class PdfJsNotInstalledError extends Error {
+  constructor() {
+    super(
+      'pdfjs-dist is not installed.\n\n' +
+      'PDF processing features require the pdfjs-dist package.\n' +
+      'Install it with:\n\n' +
+      '  npm install pdfjs-dist\n\n' +
+      'Or with yarn:\n\n' +
+      '  yarn add pdfjs-dist\n\n' +
+      'This dependency is optional and only required for PDF processing features.'
+    );
+    this.name = 'PdfJsNotInstalledError';
+  }
+}
+
+/**
+ * Lazily load pdfjs-dist module.
+ * Uses dynamic import so the library only loads when PDF functions are called.
+ * 
+ * @throws {PdfJsNotInstalledError} If pdfjs-dist is not installed
+ * @internal
+ */
+async function getPdfJs(): Promise<typeof import('pdfjs-dist')> {
+  if (pdfjsLib) {
+    return pdfjsLib;
+  }
+
+  try {
+    pdfjsLib = await import('pdfjs-dist');
+    
+    // Set the CDN URL with actual version
+    PDFJS_CDN_WORKER_URL = `${PDFJS_CDN_WORKER_BASE}${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    
+    // Configure worker (custom or CDN)
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = customWorkerSrc || PDFJS_CDN_WORKER_URL;
+    }
+    
+    return pdfjsLib;
+  } catch {
+    throw new PdfJsNotInstalledError();
+  }
+}
+
+/**
+ * Check if pdfjs-dist is available (installed).
+ * Useful to check before calling PDF functions.
+ * 
+ * @returns Promise that resolves to true if pdfjs-dist is available
+ * 
+ * @example
+ * ```typescript
+ * if (await isPdfJsAvailable()) {
+ *   const pages = await processPdfFile(file);
+ * } else {
+ *   console.log('PDF processing not available. Install pdfjs-dist to enable.');
+ * }
+ * ```
+ */
+export async function isPdfJsAvailable(): Promise<boolean> {
+  try {
+    await getPdfJs();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Configure PDF.js worker source.
+ * Call this BEFORE using any PDF processing functions.
+ * If not called, the worker will be loaded from CDN automatically.
+ * 
+ * @param workerSrc - URL to the PDF.js worker.
+ * 
+ * @example
+ * ```typescript
+ * // Use your own worker instead of CDN
+ * configurePdfWorker('/assets/pdf.worker.min.mjs');
+ * ```
+ */
+export function configurePdfWorker(workerSrc: string): void {
+  customWorkerSrc = workerSrc;
+  if (pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+  }
+}
+
+/**
+ * Check if PDF.js worker is configured
+ */
+export function isPdfWorkerConfigured(): boolean {
+  return !!(customWorkerSrc || pdfjsLib?.GlobalWorkerOptions.workerSrc);
+}
 
 export interface PdfProcessingConfig {
   /** Enable PDF processing (trimming, scaling) */
@@ -275,14 +392,35 @@ export async function processPdfPage(
 }
 
 /**
- * Process all pages of a PDF file
+ * Process all pages of a PDF file.
+ * 
+ * @remarks
+ * Requires `pdfjs-dist` to be installed:
+ * ```bash
+ * npm install pdfjs-dist
+ * ```
+ * 
+ * @param file - PDF file to process
+ * @param config - Processing configuration
+ * @returns Promise with array of processed pages
+ * @throws {PdfJsNotInstalledError} If pdfjs-dist is not installed
+ * 
+ * @example
+ * ```typescript
+ * const pages = await processPdfFile(file, {
+ *   enabled: true,
+ *   targetWidth: 576, // 80mm paper
+ *   trimMargins: { top: 10, bottom: 10, left: 5, right: 5 },
+ * });
+ * ```
  */
 export async function processPdfFile(
   file: File,
   config: PdfProcessingConfig = DEFAULT_PDF_CONFIG
 ): Promise<ProcessedPage[]> {
+  const pdfjs = await getPdfJs();
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
   const pages: ProcessedPage[] = [];
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {

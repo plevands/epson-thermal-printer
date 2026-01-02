@@ -9,20 +9,21 @@ Library for Epson thermal printer integration with PDF support and React hooks.
 ## Requirements
 
 - **Node.js** 18.x or higher
-- **React** 18.x or higher
-- **Epson ePOS SDK** 2.27.0 (included)
+- **React** 18.x or higher (optional, for hooks API)
+- **pdfjs-dist** 4.x or higher (optional, for PDF processing)
 - Epson thermal printer with network connectivity
 
 ## Features
 
 - ✅ **Official Epson ePOS SDK** integration with TypeScript support
-- 🔄 **Lazy loading** - SDK loads automatically on first print (no manual setup)
+- 🔄 **Lazy loading** - SDK loads automatically on first use
 - 📄 **PDF Processing** - Intelligent margin trimming and scaling for thermal printers
 - ⚛️ **React Hooks** - Modern hooks-based API (`useEpsonPrinter`, `usePrinterConfig`, `usePdfProcessor`)
 - 🎨 **Optional UI Components** - Ready-to-use React components for quick integration
 - 🔧 **Fully Configurable** - Control PDF processing, print quality, paper width, and more
 - 📦 **TypeScript First** - Complete type definitions included
 - 🎯 **Zero Config** - Works out of the box with sensible defaults
+- ✨ **Self-contained** - Epson SDK is embedded, no external dependencies to configure
 
 ## Installation
 
@@ -44,7 +45,30 @@ npm link @plevands/epson-thermal-printer
 npm install @plevands/epson-thermal-printer
 ```
 
-> **Note:** The library includes the Epson ePOS SDK v2.27.0. No additional downloads required.
+> **Note:** The Epson ePOS SDK v2.27.0 is embedded in the library. No additional setup required!
+
+### PDF Processing (Optional)
+
+If you want to use PDF processing features (`processPdfFile`, `usePdfProcessor`), install `pdfjs-dist`:
+
+```bash
+npm install pdfjs-dist
+```
+
+If you don't use PDF features, you don't need to install it. The library uses dynamic imports so `pdfjs-dist` is only loaded when you call PDF processing functions.
+
+## Setup (Optional)
+
+### Custom PDF.js Worker
+
+The PDF.js worker is auto-configured to use a CDN. Only configure it if you want to use your own worker:
+
+```typescript
+import { configurePdfWorker } from '@plevands/epson-thermal-printer';
+
+// Use your own worker instead of CDN
+configurePdfWorker('/assets/pdf.worker.min.mjs');
+```
 
 ## Quick Start
 
@@ -90,7 +114,7 @@ const service = new EposPrintService({
   deviceId: 'local_printer',
 });
 
-// SDK loads automatically on first print
+// SDK loads automatically from configured path (default: /epos-2.27.0.js)
 const result = await service.printCanvas(canvas);
 ```
 
@@ -288,8 +312,31 @@ const sdk = getEpsonSDK();
 // Manual initialization (optional)
 const result = await initializeEpsonSDK();
 
-// Lazy loading (automatic)
-// SDK loads automatically on first print - no manual call needed!
+// Note: SDK loads automatically on first print - no manual call needed!
+```
+
+#### PDF Processing Functions
+
+```typescript
+import {
+  configurePdfWorker,
+  isPdfWorkerConfigured,
+  PDFJS_CDN_WORKER_URL,
+  processPdfFile,
+  processPdfPage,
+} from '@plevands/epson-thermal-printer';
+
+// Configure PDF.js worker (optional but recommended)
+configurePdfWorker(PDFJS_CDN_WORKER_URL);
+
+// Check if worker is configured
+const configured = isPdfWorkerConfigured();
+
+// Process a PDF file
+const pages = await processPdfFile(file, {
+  targetWidth: 576,
+  trimMargins: { top: 10, bottom: 10 },
+});
 ```
 
 ### Logging Configuration

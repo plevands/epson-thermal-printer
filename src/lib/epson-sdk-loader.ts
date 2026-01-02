@@ -30,23 +30,23 @@ export function isEpsonSDKLoaded(): boolean {
   );
 }
 
+// Import SDK as raw text - Vite will inline this at build time
+import epsonSDKSource from '/public/epos-2.27.0.js?raw';
+
 /**
- * Get the SDK path - can be customized based on environment
+ * Cached blob URL for the SDK
  */
-function getSDKPath(): string {
-  // In development mode, load from public folder
-  if (import.meta.env.DEV) {
-    return '/epos-2.27.0.js';
+let sdkBlobURL: string | null = null;
+
+/**
+ * Get or create the SDK blob URL
+ */
+function getSDKBlobURL(): string {
+  if (!sdkBlobURL) {
+    const blob = new Blob([epsonSDKSource], { type: 'application/javascript' });
+    sdkBlobURL = URL.createObjectURL(blob);
   }
-  
-  // In production/library mode, load from bundled assets
-  // The SDK will be in dist/assets after build
-  try {
-    return new URL('../../dist/assets/epos-2.27.0.js', import.meta.url).href;
-  } catch {
-    // Fallback to relative path
-    return '/epos-2.27.0.js';
-  }
+  return sdkBlobURL;
 }
 
 /**
@@ -54,8 +54,14 @@ function getSDKPath(): string {
  */
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check if script already exists in DOM
-    const existing = document.querySelector(`script[src="${src}"]`);
+    // Check if SDK is already loaded (by checking window.epson)
+    if (isEpsonSDKLoaded()) {
+      resolve();
+      return;
+    }
+
+    // Check if script already exists in DOM with data attribute
+    const existing = document.querySelector('script[data-epson-sdk]');
     if (existing) {
       resolve();
       return;
@@ -65,15 +71,16 @@ function loadScript(src: string): Promise<void> {
     script.src = src;
     script.type = 'text/javascript';
     script.async = true;
+    script.setAttribute('data-epson-sdk', 'true');
 
     script.onload = () => {
-      debug('Epson SDK loaded successfully from:', src);
+      debug('Epson SDK loaded successfully');
       resolve();
     };
 
     script.onerror = (err) => {
-      error('Failed to load Epson SDK from:', src, err);
-      reject(new Error(`Failed to load Epson SDK from ${src}`));
+      error('Failed to load Epson SDK:', err);
+      reject(new Error('Failed to load Epson SDK'));
     };
 
     document.head.appendChild(script);
@@ -111,7 +118,6 @@ function waitForSDKAvailable(maxWait: number = 10000): Promise<boolean> {
  * Returns true if loaded successfully, false otherwise
  */
 export async function loadEpsonSDK(options?: {
-  sdkPath?: string;
   timeout?: number;
 }): Promise<boolean> {
   // Already loaded
@@ -132,13 +138,15 @@ export async function loadEpsonSDK(options?: {
 
   state.promise = (async () => {
     try {
-      const sdkPath = options?.sdkPath || getSDKPath();
       const timeout = options?.timeout || 10000;
 
-      debug('Loading Epson SDK from:', sdkPath);
+      debug('Loading embedded Epson SDK...');
+
+      // Get blob URL for the embedded SDK
+      const sdkUrl = getSDKBlobURL();
 
       // Load the script
-      await loadScript(sdkPath);
+      await loadScript(sdkUrl);
 
       // Wait for SDK to be available
       const available = await waitForSDKAvailable(timeout);

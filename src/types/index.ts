@@ -42,7 +42,6 @@ export interface LoaderState {
 }
 
 export interface SDKLoadOptions {
-  sdkPath?: string;
   timeout?: number;
 }
 

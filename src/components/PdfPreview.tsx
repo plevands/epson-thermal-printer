@@ -5,9 +5,8 @@ import { error as logError } from '../lib/logger';
 import type { PdfProcessingConfig, ProcessedPage } from '../types';
 
 // Configure PDF.js worker from CDN to avoid bundling
-const PDFJS_VERSION = '4.10.38';
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 }
 
 interface PdfPreviewProps {

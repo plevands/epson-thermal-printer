@@ -17,6 +17,12 @@ export {
   processPdfPage, 
   processPdfFile,
   DEFAULT_PDF_CONFIG,
+  configurePdfWorker,
+  isPdfWorkerConfigured,
+  isPdfJsAvailable,
+  PdfJsNotInstalledError,
+  PDFJS_CDN_WORKER_URL,
+  PDFJS_CDN_WORKER_BASE,
 } from './lib/pdf-processor';
 export { configureLogger, getLoggerConfig } from './lib/logger';
 
