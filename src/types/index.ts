@@ -7,6 +7,7 @@ export type { PdfProcessingConfig, ProcessedPage } from '../lib/pdf-processor';
 
 // Import ProcessedPage for use within this file
 import type { ProcessedPage } from '../lib/pdf-processor';
+import type { epson } from '../lib/epson-sdk';
 
 // Epson Printer Configuration
 export interface EpsonPrinterConfig {
@@ -60,6 +61,8 @@ export interface PrinterStatus {
   classes: string[];
 }
 
+export type PrintBuilderFn = (builder: epson.ePOSBuilder) => void;
+
 // Hook Return Types
 export interface UseEpsonPrinterReturn {
   /** Print a single canvas to the thermal printer */
@@ -73,6 +76,8 @@ export interface UseEpsonPrinterReturn {
       footerText?: string;
     }
   ) => Promise<PrintResult>;
+  /** Print custom commands using Epson ePOSBuilder */
+  printWithBuilder: (buildFn: PrintBuilderFn) => Promise<PrintResult>;
   /** Check printer connection without printing anything */
   checkConnection: () => Promise<PrintResult>;
   /** Test printer connection by printing a small test receipt */

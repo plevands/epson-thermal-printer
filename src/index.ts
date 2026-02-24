@@ -36,6 +36,7 @@ export type {
   EpsonPrinterConfig,
   PrintResult,
   PrintOptions,
+  PrintBuilderFn,
   PdfProcessingConfig,
   ProcessedPage,
   LoaderState,

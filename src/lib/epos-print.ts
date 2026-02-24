@@ -338,7 +338,8 @@ export class EposPrintService {
         printer.send(xml);
       } catch (err) {
         error('printWithBuilder error:', err);
-        resolve({
+        clearTimeout(timeoutId);
+        doResolve({
           success: false,
           code: 'SDK_ERROR',
           message: err instanceof Error ? err.message : 'Error desconocido',

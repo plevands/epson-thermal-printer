@@ -8,6 +8,7 @@ import type {
   EpsonPrinterConfig, 
   PrintResult, 
   PrintOptions,
+  PrintBuilderFn,
   UseEpsonPrinterReturn,
   PrinterStatus,
 } from '../types';
@@ -133,6 +134,35 @@ export function useEpsonPrinter(
     [config, options]
   );
 
+  const printWithBuilder = useCallback(
+    async (buildFn: PrintBuilderFn): Promise<PrintResult> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const service = new EposPrintService(config, options);
+        const result = await service.printWithBuilder(buildFn);
+
+        if (!result.success) {
+          setError(result.message || 'Print failed');
+        }
+
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage);
+        return {
+          success: false,
+          code: 'ERROR',
+          message: errorMessage,
+        };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [config, options]
+  );
+
   const testConnection = useCallback(async (): Promise<PrintResult> => {
     setIsLoading(true);
     setError(null);
@@ -192,6 +222,7 @@ export function useEpsonPrinter(
   return {
     print,
     printPages,
+    printWithBuilder,
     checkConnection,
     testConnection,
     isLoading,

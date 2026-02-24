@@ -102,6 +102,39 @@ function MyPrintComponent() {
 }
 ```
 
+### Text-Only Printing with Builder (Hooks API)
+
+```typescript
+import { useEpsonPrinter, usePrinterConfig } from '@plevands/epson-thermal-printer';
+
+function TextReceipt() {
+  const { config } = usePrinterConfig();
+  const { printWithBuilder, isLoading, error } = useEpsonPrinter(config, { align: 'left' });
+
+  const handlePrintText = async () => {
+    const result = await printWithBuilder((builder) => {
+      builder.addTextAlign('left');
+      builder.addText('TICKET #123\n');
+      builder.addText('Producto A x1     10.00\n');
+      builder.addText('TOTAL             10.00\n');
+      builder.addFeedLine(2);
+      builder.addCut('feed');
+    });
+
+    if (!result.success) {
+      console.error(result.message);
+    }
+  };
+
+  return (
+    <button onClick={handlePrintText} disabled={isLoading}>
+      Imprimir texto
+      {error ? ` (${error})` : ''}
+    </button>
+  );
+}
+```
+
 ### Service API (No React)
 
 ```typescript
@@ -290,6 +323,8 @@ Main hook for printer operations with automatic SDK loading.
 **Returns:**
 - `print(canvas)` - Print a single canvas
 - `printPages(canvases, options?)` - Print multiple pages
+- `printWithBuilder(builder => ...)` - Print custom ePOSBuilder commands (ideal for text receipts)
+- `checkConnection()` - Check printer connection without printing
 - `testConnection()` - Test printer connection
 - `isLoading` - Loading state
 - `error` - Error message if any
