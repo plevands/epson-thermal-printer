@@ -91,9 +91,13 @@ export interface UseEpsonPrinterReturn {
 }
 
 export interface UsePrinterConfigReturn {
-  config: EpsonPrinterConfig;
+  /** Current printer configuration, or null if not yet configured */
+  config: EpsonPrinterConfig | null;
+  /** Update configuration (merges with current config or initialConfig defaults) */
   updateConfig: (newConfig: Partial<EpsonPrinterConfig>) => void;
+  /** Reset configuration to initial value (initialConfig if provided, otherwise null) and clear localStorage */
   resetConfig: () => void;
+  /** Whether the printer has been configured by the user (config is not null and has a valid IP) */
   isConfigured: boolean;
 }
 

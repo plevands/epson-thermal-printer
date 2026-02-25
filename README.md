@@ -77,7 +77,7 @@ configurePdfWorker('/assets/pdf.worker.min.mjs');
 import { useEpsonPrinter, usePrinterConfig } from '@plevands/epson-thermal-printer';
 
 function MyPrintComponent() {
-  const { config } = usePrinterConfig();
+  const { config, isConfigured } = usePrinterConfig();
   const { print, isLoading, error } = useEpsonPrinter(config);
 
   const handlePrint = async () => {
@@ -93,7 +93,8 @@ function MyPrintComponent() {
 
   return (
     <div>
-      <button onClick={handlePrint} disabled={isLoading}>
+      {!isConfigured && <p>Please configure the printer first</p>}
+      <button onClick={handlePrint} disabled={isLoading || !isConfigured}>
         {isLoading ? 'Printing...' : 'Print'}
       </button>
       {error && <p>Error: {error}</p>}
@@ -108,7 +109,7 @@ function MyPrintComponent() {
 import { useEpsonPrinter, usePrinterConfig } from '@plevands/epson-thermal-printer';
 
 function TextReceipt() {
-  const { config } = usePrinterConfig();
+  const { config, isConfigured } = usePrinterConfig({ printerIP: '192.168.1.100' });
   const { printWithBuilder, isLoading, error } = useEpsonPrinter(config, { align: 'left' });
 
   const handlePrintText = async () => {
@@ -127,7 +128,7 @@ function TextReceipt() {
   };
 
   return (
-    <button onClick={handlePrintText} disabled={isLoading}>
+    <button onClick={handlePrintText} disabled={isLoading || !isConfigured}>
       Imprimir texto
       {error ? ` (${error})` : ''}
     </button>
@@ -168,16 +169,21 @@ import { useEpsonPrinter, usePrinterConfig } from '@plevands/epson-thermal-print
 import { useEffect, useState } from 'react';
 
 function PrinterPanel() {
-  const { config } = usePrinterConfig();
+  const { config, isConfigured } = usePrinterConfig();
   const { checkConnection, print, isLoading, error } = useEpsonPrinter(config);
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
 
   // Check connection when component mounts or config changes
   useEffect(() => {
+    if (!isConfigured) return;
     checkConnection().then(result => {
       setIsOnline(result.success);
     });
-  }, [checkConnection]);
+  }, [checkConnection, isConfigured]);
+
+  if (!isConfigured) {
+    return <span>⚙️ Please configure the printer</span>;
+  }
 
   if (isOnline === null) {
     return <span>Checking printer connection...</span>;
@@ -238,7 +244,7 @@ import {
 } from '@plevands/epson-thermal-printer';
 
 function PdfPrinter() {
-  const { config } = usePrinterConfig();
+  const { config, isConfigured } = usePrinterConfig();
   const { processFile } = usePdfProcessor({
     enabled: true,
     trimMargins: { top: 10, bottom: 10, left: 5, right: 5 },
@@ -320,6 +326,10 @@ interface EpsonPrinterConfig {
 
 Main hook for printer operations with automatic SDK loading.
 
+**Parameters:**
+- `config` - `EpsonPrinterConfig | null` — printer configuration (pass `null` or unconfigured hook value; operations will return `NOT_CONFIGURED` error)
+- `options?` - `PrintOptions` — default print options
+
 **Returns:**
 - `print(canvas)` - Print a single canvas
 - `printPages(canvases, options?)` - Print multiple pages
@@ -330,15 +340,25 @@ Main hook for printer operations with automatic SDK loading.
 - `error` - Error message if any
 - `sdkStatus` - SDK loading status
 
-#### `usePrinterConfig()`
+#### `usePrinterConfig(initialConfig?)`
 
 Manages printer configuration with localStorage persistence.
 
+Without arguments, `config` starts as `null` until the user calls `updateConfig`. Pass an `initialConfig` to provide defaults for new users.
+
+```typescript
+// No defaults — config is null until user configures
+const { config, isConfigured } = usePrinterConfig();
+
+// With defaults — config starts pre-filled
+const { config, isConfigured } = usePrinterConfig({ printerIP: '10.0.0.50' });
+```
+
 **Returns:**
-- `config` - Current configuration
-- `updateConfig(partial)` - Update configuration
-- `resetConfig()` - Reset to defaults
-- `isConfigured` - Boolean
+- `config` - Current configuration (`EpsonPrinterConfig | null`)
+- `updateConfig(partial)` - Update configuration (persists to localStorage)
+- `resetConfig()` - Reset to initial value (`initialConfig` if provided, otherwise `null`) and clear localStorage
+- `isConfigured` - `true` when config is not null and has a valid printer IP
 
 #### `usePdfProcessor(config?)`
 

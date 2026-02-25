@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-24
+
+### Changed (**BREAKING**)
+- `usePrinterConfig()` now returns `config: EpsonPrinterConfig | null` instead of always returning a default config
+  - Without arguments, `config` starts as `null` until `updateConfig()` is called
+  - `isConfigured` is now `false` by default (previously always `true`)
+- `useEpsonPrinter()` now accepts `config: EpsonPrinterConfig | null`
+  - All operations return `{ success: false, code: 'NOT_CONFIGURED' }` when config is null
+
+### Added
+- `usePrinterConfig(initialConfig?)` accepts an optional initial configuration
+  - Allows consumers to provide their own defaults (e.g. `usePrinterConfig({ printerIP: '10.0.0.1' })`)
+  - `resetConfig()` resets to the provided `initialConfig` (or `null` if none)
+  - localStorage values still take priority over `initialConfig` for returning users
+
 ## [0.1.2] - 2026-01-02
 
 ### Added

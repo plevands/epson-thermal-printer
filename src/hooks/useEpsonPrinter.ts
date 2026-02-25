@@ -13,8 +13,14 @@ import type {
   PrinterStatus,
 } from '../types';
 
+const NOT_CONFIGURED_RESULT: PrintResult = {
+  success: false,
+  code: 'NOT_CONFIGURED',
+  message: 'Printer not configured',
+};
+
 export function useEpsonPrinter(
-  config: EpsonPrinterConfig,
+  config: EpsonPrinterConfig | null,
   options?: PrintOptions
 ): UseEpsonPrinterReturn {
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +65,11 @@ export function useEpsonPrinter(
 
   const print = useCallback(
     async (canvas: HTMLCanvasElement): Promise<PrintResult> => {
+      if (!config) {
+        setError(NOT_CONFIGURED_RESULT.message!);
+        return NOT_CONFIGURED_RESULT;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -95,6 +106,11 @@ export function useEpsonPrinter(
         footerText?: string;
       }
     ): Promise<PrintResult> => {
+      if (!config) {
+        setError(NOT_CONFIGURED_RESULT.message!);
+        return NOT_CONFIGURED_RESULT;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -136,6 +152,11 @@ export function useEpsonPrinter(
 
   const printWithBuilder = useCallback(
     async (buildFn: PrintBuilderFn): Promise<PrintResult> => {
+      if (!config) {
+        setError(NOT_CONFIGURED_RESULT.message!);
+        return NOT_CONFIGURED_RESULT;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -164,6 +185,11 @@ export function useEpsonPrinter(
   );
 
   const testConnection = useCallback(async (): Promise<PrintResult> => {
+    if (!config) {
+      setError(NOT_CONFIGURED_RESULT.message!);
+      return NOT_CONFIGURED_RESULT;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -192,6 +218,11 @@ export function useEpsonPrinter(
   }, [config, options]);
 
   const checkConnection = useCallback(async (): Promise<PrintResult> => {
+    if (!config) {
+      setError(NOT_CONFIGURED_RESULT.message!);
+      return NOT_CONFIGURED_RESULT;
+    }
+
     setIsLoading(true);
     setError(null);
 
