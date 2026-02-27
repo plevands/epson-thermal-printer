@@ -109,7 +109,9 @@ function MyPrintComponent() {
 import { useEpsonPrinter, usePrinterConfig } from '@plevands/epson-thermal-printer';
 
 function TextReceipt() {
-  const { config, isConfigured } = usePrinterConfig({ printerIP: '192.168.1.100' });
+  const { config, isConfigured } = usePrinterConfig({
+    initialConfig: { printerIP: '192.168.1.100' },
+  });
   const { printWithBuilder, isLoading, error } = useEpsonPrinter(config, { align: 'left' });
 
   const handlePrintText = async () => {
@@ -340,18 +342,30 @@ Main hook for printer operations with automatic SDK loading.
 - `error` - Error message if any
 - `sdkStatus` - SDK loading status
 
-#### `usePrinterConfig(initialConfig?)`
+#### `usePrinterConfig(options?)`
 
 Manages printer configuration with localStorage persistence.
 
-Without arguments, `config` starts as `null` until the user calls `updateConfig`. Pass an `initialConfig` to provide defaults for new users.
+Without arguments, `config` starts as `null` until the user calls `updateConfig`. Pass `initialConfig` to provide defaults for new users. Pass `storageKey` to use a custom localStorage key — useful when managing multiple printer configurations (e.g. one per network).
+
+**Options (`UsePrinterConfigOptions`):**
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `initialConfig` | `EpsonPrinterConfig` | `undefined` | Defaults for new users. localStorage values take priority for returning users. |
+| `storageKey` | `string` | `'epson-printer-config'` | localStorage key for this configuration instance. |
 
 ```typescript
 // No defaults — config is null until user configures
 const { config, isConfigured } = usePrinterConfig();
 
 // With defaults — config starts pre-filled
-const { config, isConfigured } = usePrinterConfig({ printerIP: '10.0.0.50' });
+const { config, isConfigured } = usePrinterConfig({
+  initialConfig: { printerIP: '10.0.0.50' },
+});
+
+// Multiple configs for different networks
+const office    = usePrinterConfig({ storageKey: 'printer-office' });
+const warehouse = usePrinterConfig({ storageKey: 'printer-warehouse' });
 ```
 
 **Returns:**

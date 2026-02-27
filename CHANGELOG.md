@@ -15,10 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All operations return `{ success: false, code: 'NOT_CONFIGURED' }` when config is null
 
 ### Added
-- `usePrinterConfig(initialConfig?)` accepts an optional initial configuration
-  - Allows consumers to provide their own defaults (e.g. `usePrinterConfig({ printerIP: '10.0.0.1' })`)
-  - `resetConfig()` resets to the provided `initialConfig` (or `null` if none)
-  - localStorage values still take priority over `initialConfig` for returning users
+- `usePrinterConfig(options?)` accepts an options object with:
+  - `initialConfig` — optional initial configuration for new users (e.g. `{ printerIP: '10.0.0.1' }`). `resetConfig()` resets to this value (or `null` if none). localStorage values still take priority for returning users.
+  - `storageKey` — custom localStorage key (default: `'epson-printer-config'`). Enables multiple independent printer configurations (e.g. one per network) by using different keys per instance.
+- New exported type `UsePrinterConfigOptions`
 
 ## [0.1.2] - 2026-01-02
 

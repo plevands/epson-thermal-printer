@@ -90,6 +90,16 @@ export interface UseEpsonPrinterReturn {
   sdkStatus: PrinterStatus;
 }
 
+export interface UsePrinterConfigOptions {
+  /** Initial printer configuration used as defaults for new users.
+   *  localStorage values take priority over this for returning users. */
+  initialConfig?: EpsonPrinterConfig;
+  /** Custom localStorage key for persisting this configuration.
+   *  Defaults to `'epson-printer-config'`.
+   *  Use different keys to manage multiple printer configurations (e.g. per network). */
+  storageKey?: string;
+}
+
 export interface UsePrinterConfigReturn {
   /** Current printer configuration, or null if not yet configured */
   config: EpsonPrinterConfig | null;

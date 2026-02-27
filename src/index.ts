@@ -44,6 +44,7 @@ export type {
   InitializeSDKResult,
   PrinterStatus,
   UseEpsonPrinterReturn,
+  UsePrinterConfigOptions,
   UsePrinterConfigReturn,
   UsePdfProcessorReturn,
   LogLevel,
